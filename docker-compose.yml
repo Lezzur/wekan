@@ -28,6 +28,10 @@ services:
     environment:
       - WEKAN_URL=http://wekan:8080
       - FLOW_INTERVAL_SECONDS=300
+      # Service-account creds for the flow loop (values live in .env, off-repo).
+      - WEKAN_USER=${WEKAN_USER:-}
+      - WEKAN_PASS=${WEKAN_PASS:-}
+      - WEKAN_BLOCKED_LABEL=${WEKAN_BLOCKED_LABEL:-blocked}
       # - MATTERMOST_WEBHOOK=   # set to enable ChatOps (decision deferred)
     ports:
       - "8000:8000"
