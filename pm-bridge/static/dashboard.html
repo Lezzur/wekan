@@ -154,13 +154,13 @@ function render(d) {
       <div style="display:flex;align-items:center;gap:13px;">
         <div style="width:11px;height:11px;border-radius:50%;background:${ACCENT};"></div>
         <div style="font-size:18px;font-weight:600;color:#16202b;letter-spacing:-0.01em;">PM Flow — Honest Metrics</div>
-        <div style="font-size:12px;font-weight:500;color:#4c6079;background:#e8f0fa;border-radius:20px;padding:3px 12px;">no velocity · no burndown · no leaderboards</div>
+        <div style="font-size:13px;font-weight:500;color:#4c6079;background:#e8f0fa;border-radius:20px;padding:3px 12px;">no velocity · no burndown · no leaderboards</div>
+        <span id="mode-chip" class="mono" style="display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;border-radius:20px;padding:4px 11px;"><span class="pulse" id="mode-dot" style="width:7px;height:7px;border-radius:50%;"></span><span id="mode-text"></span></span>
       </div>
-      <div class="nav mono" style="display:flex;align-items:center;gap:8px;font-size:12px;">
-        <span id="mode-chip" style="display:flex;align-items:center;gap:7px;border-radius:20px;padding:6px 13px;"><span class="pulse" id="mode-dot" style="width:7px;height:7px;border-radius:50%;"></span><span id="mode-text"></span></span>
-        <span style="color:#3d5573;background:#eef4fb;border-radius:20px;padding:6px 13px;">refresh 30s</span>
-        <a href="/ui/settings" style="color:#5a6675;padding:6px 8px;">⚙ Settings</a>
-        <a href="/ui" style="color:#5a6675;padding:6px 8px;">Board →</a>
+      <div class="nav" style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:13.5px;font-weight:600;color:#fff;background:${ACCENT};border-radius:22px;padding:7px 18px;">Dashboard</span>
+        <a href="/ui" style="font-size:13.5px;color:#5a6675;padding:7px 8px;">Board</a>
+        <a href="/ui/settings" style="font-size:13.5px;color:#5a6675;padding:7px 8px;">Settings</a>
       </div>
     </div>
 
