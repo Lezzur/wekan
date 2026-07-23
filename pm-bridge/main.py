@@ -36,7 +36,7 @@ app = FastAPI(title="pm-bridge", version="0.1.0")
 # Honest flow metrics only — no velocity points, no burndown, no leaderboards.
 WIP = Gauge("pm_wip", "Cards currently in progress", ["board", "column"])
 CYCLE_TIME = Gauge("pm_cycle_time_seconds", "Mean cycle time of cards completed in the last interval", ["board"])
-BLOCKED_AGE = Gauge("pm_blocked_age_seconds", "Age of the oldest blocked card", ["board"])
+BLOCKED_AGE = Gauge("pm_blocked_age_seconds", "Idle time (since last activity) of the oldest blocked card; lower bound on true block duration", ["board"])
 THROUGHPUT = Gauge("pm_throughput_cards", "Cards completed in the last interval", ["board"])
 
 _client: httpx.AsyncClient | None = None
@@ -189,7 +189,10 @@ async def _collect_board_metrics(wk: WekanClient, board: dict, now: float) -> No
 
             card_label_ids = set(card.get("labelIds") or [])
             if blocked_label_ids & card_label_ids:
-                # No native "blocked since" — use last activity as the proxy age anchor.
+                # WeKan records no "blocked since" (its activity log has no
+                # addedLabel events), so anchor on last activity. This measures
+                # idle time — a lower bound on true block duration, since any
+                # touch resets it. Oldest anchor = the blocked card idle longest.
                 anchor = _parse_ts(card.get("dateLastActivity")) or _parse_ts(card.get("createdAt"))
                 if anchor is not None and (oldest_blocked_ts is None or anchor < oldest_blocked_ts):
                     oldest_blocked_ts = anchor
