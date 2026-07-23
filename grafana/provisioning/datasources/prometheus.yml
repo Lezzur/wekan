@@ -1,0 +1,12 @@
+apiVersion: 1
+
+# Datasource-as-code: Grafana's Layer-1 UI reads flow metrics from Prometheus,
+# which scrapes pm-bridge. uid is pinned so dashboards can reference it stably.
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
