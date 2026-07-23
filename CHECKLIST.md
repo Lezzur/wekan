@@ -31,4 +31,4 @@ Legend: [x] done & verified · [~] partial/stubbed · [ ] not started · [cut] i
 
 ## UI (new ask — 2 visual layers on live backends)
 - [x] Layer 1 — **Flow metrics UI** (Grafana): CFD + cycle time + throughput + blocked-age, backed by Prometheus ← pm-bridge. Live at `:3000/d/pm-flow`, all four panels rendering real data from the seeded board.
-- [x] Layer 2 — **Board UI** (WeKan): the Kanban board itself, backed by Mongo — live on worker4080:8090 (needs first admin registered)
+- [x] Layer 2 — **Board UI** (WeKan): the Kanban board itself, backed by Mongo — live on worker4080:8090. Admin `rockadmin` registered; least-priv `pm-bridge` service user minted; demo board `ECYETuFPdCyRSoHCP` seeded (5/4/3/6 across To Do/In Progress/Review/Done).
