@@ -1,0 +1,12 @@
+route:
+  receiver: pm-bridge
+  group_by: ["alertname"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: pm-bridge
+    webhook_configs:
+      - url: "http://pm-bridge:8000/alert"
+        send_resolved: false

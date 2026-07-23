@@ -1,0 +1,69 @@
+# WeKan PM-layer — lean v1 core.
+# Deferred/out of v1: Redis, Mattermost, Uptime-Kuma, bge-m3 (see discovery/GLOSSARY).
+services:
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    command: mongod --oplogSize 128 --quiet
+    volumes:
+      - mongo-data:/data/db
+
+  wekan:
+    image: wekanteam/wekan:latest
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/wekan
+      - ROOT_URL=http://localhost:8080
+      - PORT=8080
+    ports:
+      - "8080:8080"
+
+  pm-bridge:
+    build: ./pm-bridge
+    restart: unless-stopped
+    depends_on:
+      - wekan
+    environment:
+      - WEKAN_URL=http://wekan:8080
+      - FLOW_INTERVAL_SECONDS=300
+      # - MATTERMOST_WEBHOOK=   # set to enable ChatOps (decision deferred)
+    ports:
+      - "8000:8000"
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    depends_on:
+      - pm-bridge
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+
+volumes:
+  mongo-data:
+  prometheus-data:
+  grafana-data:
