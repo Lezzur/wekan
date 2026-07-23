@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PM Flow — Honest Metrics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #dfe5ec; padding: 28px; font-family: 'IBM Plex Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  @keyframes omPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .pulse { animation: omPulse 2s infinite; }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
+  .nav a { text-decoration: none; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// --- SVG builders, ported from the design mock ------------------------------
+function buildStacked(w, h, series, grid) {
+  const N = Math.max(...series.map(s => s.v.length), 1);
+  const pl = 8, pr = 8, pt = 12, pb = 8;
+  let maxT = 0;
+  for (let i = 0; i < N; i++) { let t = 0; series.forEach(s => t += (s.v[i] || 0)); if (t > maxT) maxT = t; }
+  maxT = maxT || 1;
+  const X = i => pl + i * (w - pl - pr) / Math.max(N - 1, 1);
+  const Y = v => h - pb - (v / maxT) * (h - pt - pb);
+  let els = '';
+  const step = Math.max(1, Math.ceil(maxT / 4));
+  for (let g = 0; g <= maxT; g += step) els += `<line x1="${pl}" x2="${w - pr}" y1="${Y(g)}" y2="${Y(g)}" stroke="${grid}" stroke-width="1"/>`;
+  let lower = new Array(N).fill(0);
+  series.forEach(s => {
+    const upper = lower.map((lo, i) => lo + (s.v[i] || 0));
+    let d = `M${X(0).toFixed(1)},${Y(upper[0]).toFixed(1)}`;
+    for (let i = 1; i < N; i++) d += ` L${X(i).toFixed(1)},${Y(upper[i]).toFixed(1)}`;
+    for (let i = N - 1; i >= 0; i--) d += ` L${X(i).toFixed(1)},${Y(lower[i]).toFixed(1)}`;
+    d += ' Z';
+    els += `<path d="${d}" fill="${s.color}" fill-opacity="0.55" stroke="${s.color}" stroke-width="1"/>`;
+    lower = upper;
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">${els}</svg>`;
+}
+
+function buildLine(w, h, vals, color, grid) {
+  vals = vals.length ? vals : [0];
+  const pl = 6, pr = 6, pt = 8, pb = 8, n = vals.length;
+  const mx = Math.max(...vals), mn = Math.min(...vals);
+  const max = (mx * 1.08) || 1, min = mn === mx ? mn - 1 : mn * 0.92;
+  const X = i => pl + i * (w - pl - pr) / Math.max(n - 1, 1);
+  const Y = v => h - pb - ((v - min) / ((max - min) || 1)) * (h - pt - pb);
+  let els = '';
+  for (let g = 0; g < 3; g++) { const y = pt + g * (h - pt - pb) / 2; els += `<line x1="${pl}" x2="${w - pr}" y1="${y}" y2="${y}" stroke="${grid}" stroke-width="1"/>`; }
+  let area = `M${X(0).toFixed(1)},${(h - pb)}`;
+  vals.forEach((v, i) => area += ` L${X(i).toFixed(1)},${Y(v).toFixed(1)}`);
+  area += ` L${X(n - 1).toFixed(1)},${(h - pb)} Z`;
+  els += `<path d="${area}" fill="${color}" fill-opacity="0.12"/>`;
+  const pts = vals.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  els += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">${els}</svg>`;
+}
+
+function buildBars(w, h, vals, color, grid) {
+  vals = vals.length ? vals : [0];
+  const pl = 6, pr = 6, pt = 8, pb = 8, n = vals.length;
+  const max = Math.max(...vals) || 1;
+  const cw = (w - pl - pr) / n, bw = cw * 0.62;
+  const Y = v => h - pb - (v / max) * (h - pt - pb);
+  let els = '';
+  for (let g = 0; g < 3; g++) { const y = pt + g * (h - pt - pb) / 2; els += `<line x1="${pl}" x2="${w - pr}" y1="${y}" y2="${y}" stroke="${grid}" stroke-width="1"/>`; }
+  vals.forEach((v, i) => { const x = pl + i * cw + (cw - bw) / 2, y = Y(v); els += `<rect x="${x}" y="${y}" width="${bw}" height="${(h - pb) - y}" rx="1" fill="${color}" fill-opacity="${i === n - 1 ? 0.95 : 0.7}"/>`; });
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">${els}</svg>`;
+}
+
+function buildSpark(w, h, vals, color) {
+  vals = vals.length ? vals : [0, 1];
+  const n = vals.length, max = Math.max(...vals) || 1;
+  const X = i => i * w / Math.max(n - 1, 1);
+  const Y = v => h - (v / max) * (h - 4) - 2;
+  let d = `M0,${h}`;
+  vals.forEach((v, i) => d += ` L${X(i).toFixed(1)},${Y(v).toFixed(1)}`);
+  d += ` L${w},${h} Z`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><path d="${d}" fill="${color}" fill-opacity="0.5"/></svg>`;
+}
+
+const ACCENT = 'oklch(0.58 0.1 245)';
+const LEGEND = [
+  { name: 'To Do', color: '#9b51e0', done: false },
+  { name: 'In Progress', color: '#e08a1e', done: false },
+  { name: 'Review', color: '#2f80c4', done: false },
+  { name: 'Done', color: '#4a9e3f', done: true },
+];
+
+function blockedColor(sec) {
+  if (sec >= 259200) return { c: '#d13b46', note: 'exceeds 3d red threshold' };
+  if (sec >= 86400) return { c: '#d98a1e', note: 'over 1d yellow threshold' };
+  if (sec > 0) return { c: '#3c9a5f', note: 'under 1d green' };
+  return { c: '#3c9a5f', note: 'no blocked cards' };
+}
+
+function render(d) {
+  const legendRows = LEGEND.map(l => `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:${l.done ? '#eef6f0' : '#f4f8fc'};border-radius:10px;padding:6px 12px;">
+      <span style="display:flex;align-items:center;gap:9px;color:${l.done ? '#2f4738' : '#3a4656'};font-weight:600;"><i style="width:11px;height:11px;border-radius:4px;background:${l.color};"></i>${l.name}</span>
+      <span class="mono" style="font-weight:600;">${d.cfd.last[l.name] ?? 0}</span>
+    </div>`).join('');
+
+  const bc = blockedColor(d.blocked.seconds);
+
+  document.getElementById('root').innerHTML = `
+  <div style="max-width:1230px;margin:0 auto;background:#eef2f6;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px -34px rgba(0,0,0,.45);color:#16202b;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;background:#fff;border-bottom:1px solid #e1e7ee;">
+      <div style="display:flex;align-items:center;gap:13px;">
+        <div style="width:11px;height:11px;border-radius:50%;background:${ACCENT};"></div>
+        <div style="font-size:18px;font-weight:600;color:#16202b;letter-spacing:-0.01em;">PM Flow — Honest Metrics</div>
+        <div style="font-size:12px;font-weight:500;color:#4c6079;background:#e8f0fa;border-radius:20px;padding:3px 12px;">no velocity · no burndown · no leaderboards</div>
+      </div>
+      <div class="nav mono" style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <span style="display:flex;align-items:center;gap:7px;color:#3d5573;background:#eef4fb;border-radius:20px;padding:6px 13px;"><span class="pulse" style="width:7px;height:7px;border-radius:50%;background:oklch(0.62 0.13 155);"></span>Last 24 hours</span>
+        <span style="color:#3d5573;background:#eef4fb;border-radius:20px;padding:6px 13px;">refresh 30s</span>
+        <a href="/ui" style="color:#5a6675;padding:6px 8px;">Board →</a>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;padding:20px;background:#eef2f6;">
+      <div style="background:#fff;border:1px solid #e3e9f0;border-radius:16px;padding:16px 18px 10px;">
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">
+          <span style="font-size:14px;font-weight:700;color:#1b2531;">Cumulative Flow (WIP per column)</span>
+          <span style="font-size:11.5px;color:#68727f;">Stacked card count per column · a widening band is a bottleneck</span>
+        </div>
+        <div style="display:flex;gap:16px;">
+          <div style="flex:1;min-width:0;">${buildStacked(900, 190, d.cfd.series, '#eaf0f6')}</div>
+          <div style="width:190px;flex-shrink:0;display:flex;flex-direction:column;gap:5px;font-size:12.5px;">${legendRows}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="background:#fff;border:1px solid #e3e9f0;border-radius:16px;padding:16px 18px 12px;">
+          <div style="font-size:14px;font-weight:700;color:#1b2531;">Mean Cycle Time</div>
+          <div style="font-size:11.5px;color:#68727f;margin-bottom:8px;">start→end · convention-dependent (startAt/endAt)</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;">
+            <span class="mono" style="font-size:26px;font-weight:600;color:#16202b;">${esc(d.cycle.valueText)}</span>
+            <span class="mono" style="font-size:11.5px;color:#8b94a0;">${esc(d.cycle.secondsText)}</span>
+          </div>
+          ${buildLine(520, 104, d.cycle.v, ACCENT, '#eaf0f6')}
+        </div>
+        <div style="background:#fff;border:1px solid #e3e9f0;border-radius:16px;padding:16px 18px 12px;">
+          <div style="font-size:14px;font-weight:700;color:#1b2531;">Throughput (cards / interval)</div>
+          <div style="font-size:11.5px;color:#68727f;margin-bottom:8px;">completed last interval · endAt</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;">
+            <span class="mono" style="font-size:26px;font-weight:600;color:#16202b;">${d.tput.value}</span>
+            <span class="mono" style="font-size:11.5px;color:#8b94a0;">cards / 5m</span>
+          </div>
+          ${buildBars(520, 104, d.tput.v, ACCENT, '#eaf0f6')}
+        </div>
+      </div>
+
+      <div style="background:#fdf3f3;border:1px solid #f4d4d3;border-radius:16px;padding:16px 20px;position:relative;overflow:hidden;">
+        <div style="position:absolute;inset:auto 0 0 0;opacity:0.6;">${buildSpark(1180, 46, d.blocked.v, '#d13b46')}</div>
+        <div style="position:relative;">
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <span style="font-size:14px;font-weight:700;color:#8a2f2f;">Oldest Blocked Card — Age</span>
+            <span style="font-size:11.5px;color:#b07875;">anchored on last activity (no native "blocked since")</span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:12px;margin-top:6px;">
+            <span class="mono" style="font-size:44px;font-weight:600;color:${bc.c};line-height:1;">${esc(d.blocked.text)}</span>
+            <span class="mono" style="font-size:12.5px;color:#b16267;">${esc(d.blocked.secondsText)} · ${bc.note}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function load() {
+  try {
+    const r = await fetch('/ui/api/flow', { cache: 'no-store' });
+    render(await r.json());
+  } catch (e) {
+    document.getElementById('root').innerHTML =
+      `<div style="max-width:1230px;margin:40px auto;color:#8a2f2f;font-size:14px;">Dashboard unavailable: ${esc(e.message)}</div>`;
+  }
+}
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>

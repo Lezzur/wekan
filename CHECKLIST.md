@@ -32,3 +32,8 @@ Legend: [x] done & verified · [~] partial/stubbed · [ ] not started · [cut] i
 ## UI (new ask — 2 visual layers on live backends)
 - [x] Layer 1 — **Flow metrics UI** (Grafana): CFD + cycle time + throughput + blocked-age, backed by Prometheus ← pm-bridge. Live at `:3000/d/pm-flow`, all four panels rendering real data from the seeded board.
 - [x] Layer 2 — **Board UI** (WeKan): the Kanban board itself, backed by Mongo — live on worker4080:8090. Admin `rockadmin` registered; least-priv `pm-bridge` service user minted; demo board `ECYETuFPdCyRSoHCP` seeded (5/4/3/6 across To Do/In Progress/Review/Done).
+
+## Design handoff — "Soft Clinical" (#1d board + #2b dashboard)
+- [x] **Board (#1d)** — pixel-faithful Soft Clinical Kanban served by pm-bridge at `:8000/ui`, wired to live WeKan REST (`/ui/api/board`). Rounded cards, 4 columns (5/4/3/6), green Done column w/ ✓ glyphs, blocked-label pulse banner. Drag-to-move (`PUT /ui/api/move` → WeKan) + card-detail modal. `prefers-reduced-motion` honored. Verified live: WIP 5/4/3/6 exact, blocked card detected.
+- [x] **Dashboard (#2b)** — Soft Clinical re-skin of PM Flow — Honest Metrics at `:8000/ui/dashboard`, wired to Prometheus (`/ui/api/flow`). CFD stacked area + mean cycle + throughput + oldest-blocked, SVG builders ported from the mock, 30s refresh, threshold coloring. Verified live: cycle 2.83 d / 244,800 s, throughput 6, blocked 3d 05h. No velocity/burndown/leaderboards.
+- Vanilla HTML/CSS/JS (no build toolchain) served by the existing FastAPI spine — no new container. Design-mock content was sample data; screens render real board/Prometheus state.
