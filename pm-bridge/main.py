@@ -303,6 +303,11 @@ async def ui_dashboard_page() -> FileResponse:
     return FileResponse(STATIC_DIR / "dashboard.html")
 
 
+@app.get("/ui/settings")
+async def ui_settings_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "settings.html")
+
+
 @app.get("/ui/api/board")
 async def ui_api_board() -> JSONResponse:
     assert _client is not None

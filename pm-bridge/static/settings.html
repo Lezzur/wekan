@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PM Flow — Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #dfe5ec; padding: 28px; font-family: 'IBM Plex Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; color: #16202b; }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: normal; font-feature-settings: "zero" 0; }
+  .nav a { text-decoration: none; }
+  .switch { position: relative; width: 52px; height: 30px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; cursor: pointer; background: #c6cfda; border-radius: 30px; transition: background .18s ease; }
+  .slider::before { content: ""; position: absolute; height: 24px; width: 24px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .18s ease; box-shadow: 0 1px 3px rgba(20,40,70,.35); }
+  input:checked + .slider { background: oklch(0.62 0.13 155); }
+  input:checked + .slider::before { transform: translateX(22px); }
+  input:focus-visible + .slider { outline: 2px solid oklch(0.58 0.1 245); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .slider, .slider::before { transition: none; } }
+</style>
+</head>
+<body>
+<div style="max-width:720px;margin:0 auto;background:#eef2f6;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px -34px rgba(0,0,0,.45);">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;background:#fff;border-bottom:1px solid #e1e7ee;">
+    <div style="display:flex;align-items:center;gap:13px;">
+      <div style="width:11px;height:11px;border-radius:50%;background:oklch(0.58 0.1 245);"></div>
+      <div style="font-size:18px;font-weight:600;letter-spacing:-0.01em;">Settings</div>
+      <div style="font-size:12px;font-weight:500;color:#4c6079;background:#e8f0fa;border-radius:20px;padding:3px 12px;">PM Flow dashboard</div>
+    </div>
+    <div class="nav" style="display:flex;align-items:center;gap:8px;">
+      <a href="/ui/dashboard" style="font-size:13.5px;color:#5a6675;padding:7px 8px;">← Dashboard</a>
+    </div>
+  </div>
+
+  <div style="padding:20px;">
+    <div style="background:#fff;border:1px solid #e3e9f0;border-radius:16px;padding:18px 20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:15px;font-weight:700;">Live</span>
+            <span id="mode-chip" class="mono" style="font-size:11px;font-weight:600;border-radius:20px;padding:3px 10px;"></span>
+          </div>
+          <div style="font-size:13px;color:#68727f;line-height:1.5;margin-top:6px;max-width:440px;">
+            On &mdash; the dashboard reads <strong>real data</strong> from Prometheus (via pm-bridge).
+            Off &mdash; it renders <strong>dummy sample data</strong> so the layout can be demoed without live board activity.
+          </div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="live-toggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="mono" style="font-size:11.5px;color:#98a1ad;margin-top:14px;border-top:1px solid #eef2f6;padding-top:12px;">
+        Stored in this browser (localStorage · key <code>pmLive</code>). Default: on.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'pmLive';
+// Default to live (on) when unset.
+const isLive = () => (localStorage.getItem(KEY) ?? 'on') !== 'off';
+
+const toggle = document.getElementById('live-toggle');
+const chip = document.getElementById('mode-chip');
+
+function paint() {
+  const live = isLive();
+  toggle.checked = live;
+  chip.textContent = live ? 'LIVE' : 'DEMO';
+  chip.style.color = live ? '#2f6e42' : '#8a5a12';
+  chip.style.background = live ? '#e2f3e8' : '#f6ecda';
+}
+
+toggle.addEventListener('change', () => {
+  localStorage.setItem(KEY, toggle.checked ? 'on' : 'off');
+  paint();
+});
+
+paint();
+</script>
+</body>
+</html>

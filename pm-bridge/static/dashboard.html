@@ -10,7 +10,7 @@
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; background: #dfe5ec; padding: 28px; font-family: 'IBM Plex Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: normal; font-feature-settings: "zero" 0; }
   @keyframes omPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
   .pulse { animation: omPulse 2s infinite; }
   @media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
@@ -104,6 +104,52 @@ function blockedColor(sec) {
   return { c: '#3c9a5f', note: 'no blocked cards' };
 }
 
+// --- Dummy sample data (shaped exactly like /ui/api/flow) -------------------
+// Rendered when the "Live" setting is off, so the layout can be demoed without
+// real board activity. Smooth by design — this is the "looks like the mock" mode.
+const DUMMY = {
+  cfd: {
+    series: [
+      { name: 'Done',        color: '#4a9e3f', v: [1,1,2,2,3,3,4,4,5,5,6,6] },
+      { name: 'Review',      color: '#2f80c4', v: [1,2,2,2,3,3,3,3,3,3,3,3] },
+      { name: 'In Progress', color: '#e08a1e', v: [2,2,3,3,3,4,4,4,4,4,4,4] },
+      { name: 'To Do',       color: '#9b51e0', v: [3,3,4,4,4,5,5,5,5,5,5,5] },
+    ],
+    last: { 'To Do': 5, 'In Progress': 4, 'Review': 3, 'Done': 6 },
+  },
+  cycle: {
+    valueText: '2.71 d',
+    secondsText: '234,000 s',
+    v: [198000,210000,224000,219000,240000,251000,244800,238000,246000,242000,236000,234000],
+  },
+  tput: { value: 6, v: [2,3,1,4,2,3,5,4,6,3,5,6] },
+  blocked: {
+    text: '2d 14h',
+    seconds: 223200,
+    secondsText: '223,200 s',
+    v: [30000,70000,110000,150000,180000,205000,218000,223200],
+  },
+};
+
+const MODE_KEY = 'pmLive';
+const isLive = () => (localStorage.getItem(MODE_KEY) ?? 'on') !== 'off';
+
+function paintMode(live) {
+  const chip = document.getElementById('mode-chip');
+  const dot = document.getElementById('mode-dot');
+  const text = document.getElementById('mode-text');
+  if (!chip) return;
+  if (live) {
+    text.textContent = 'LIVE · last 24h';
+    chip.style.color = '#2f6e42'; chip.style.background = '#e2f3e8';
+    dot.style.background = 'oklch(0.62 0.13 155)';
+  } else {
+    text.textContent = 'DEMO · sample data';
+    chip.style.color = '#8a5a12'; chip.style.background = '#f6ecda';
+    dot.style.background = '#d9a441';
+  }
+}
+
 function render(d) {
   const legendRows = LEGEND.map(l => `
     <div style="display:flex;align-items:center;justify-content:space-between;background:${l.done ? '#eef6f0' : '#f4f8fc'};border-radius:10px;padding:6px 12px;">
@@ -122,8 +168,9 @@ function render(d) {
         <div style="font-size:12px;font-weight:500;color:#4c6079;background:#e8f0fa;border-radius:20px;padding:3px 12px;">no velocity · no burndown · no leaderboards</div>
       </div>
       <div class="nav mono" style="display:flex;align-items:center;gap:8px;font-size:12px;">
-        <span style="display:flex;align-items:center;gap:7px;color:#3d5573;background:#eef4fb;border-radius:20px;padding:6px 13px;"><span class="pulse" style="width:7px;height:7px;border-radius:50%;background:oklch(0.62 0.13 155);"></span>Last 24 hours</span>
+        <span id="mode-chip" style="display:flex;align-items:center;gap:7px;border-radius:20px;padding:6px 13px;"><span class="pulse" id="mode-dot" style="width:7px;height:7px;border-radius:50%;"></span><span id="mode-text"></span></span>
         <span style="color:#3d5573;background:#eef4fb;border-radius:20px;padding:6px 13px;">refresh 30s</span>
+        <a href="/ui/settings" style="color:#5a6675;padding:6px 8px;">⚙ Settings</a>
         <a href="/ui" style="color:#5a6675;padding:6px 8px;">Board →</a>
       </div>
     </div>
@@ -179,9 +226,16 @@ function render(d) {
 }
 
 async function load() {
+  const live = isLive();
+  if (!live) {
+    render(DUMMY);
+    paintMode(false);
+    return;
+  }
   try {
     const r = await fetch('/ui/api/flow', { cache: 'no-store' });
     render(await r.json());
+    paintMode(true);
   } catch (e) {
     document.getElementById('root').innerHTML =
       `<div style="max-width:1230px;margin:40px auto;color:#8a2f2f;font-size:14px;">Dashboard unavailable: ${esc(e.message)}</div>`;
