@@ -14,8 +14,8 @@ Legend: [x] done & verified · [~] partial/stubbed · [ ] not started · [cut] i
 - [~] Alert dedup — works single-node (asyncio lock + fingerprint set)
 
 ## In flight
-- [~] **S1** — WeKan REST client in the flow loop: populate `pm_wip`, `pm_cycle_time_seconds`, `pm_blocked_age_seconds`, `pm_throughput_cards` from the live board (owner: Sanchez, ETA 2026-07-24). Code written + committed on branch `s1-flow-client`; NOT merged — blocked on a WeKan service login to verify against the live board.
-- [~] **S2** — Grafana dashboards: CFD + cycle-time + throughput + blocked-age dashboard provisioned as code (`grafana/provisioning` + `grafana/dashboards/flow-metrics.json`), verified loaded against live Prometheus. Panels read "No data" until S1 gauges populate.
+- [x] **S1** — WeKan REST client in the flow loop: populates `pm_wip`, `pm_cycle_time_seconds`, `pm_blocked_age_seconds`, `pm_throughput_cards` from the live board (owner: Sanchez). Merged to `main` (b3d2947). Verified live against the seeded demo board: WIP 5/4/3/6 exact, throughput 6, mean cycle 244800s (2.83d), blocked-age ~3d. Fixed the label bug (cards carry `labelIds`; names live on the board doc — resolve via `board_detail`). Service login `pm-bridge` (least-priv) wired via `WEKAN_USER`/`WEKAN_PASS`.
+- [x] **S2** — Grafana dashboards: CFD + cycle-time + throughput + blocked-age dashboard provisioned as code (`grafana/provisioning` + `grafana/dashboards/flow-metrics.json`), verified rendering live data (not just loaded).
 - [ ] WeKan REST board mutation — `/wekan` translate board events; `/alert` create Triage cards
 
 ## Bypassed / deferred (revivable)
@@ -30,5 +30,5 @@ Legend: [x] done & verified · [~] partial/stubbed · [ ] not started · [cut] i
 - [ ] Backups — restic on the data volumes (mongo-data, grafana-data, prometheus-data)
 
 ## UI (new ask — 2 visual layers on live backends)
-- [~] Layer 1 — **Flow metrics UI** (Grafana): CFD + cycle time, backed by Prometheus ← pm-bridge. Dashboard live at `:3000/d/pm-flow`, datasource health OK; awaits S1 gauge data.
+- [x] Layer 1 — **Flow metrics UI** (Grafana): CFD + cycle time + throughput + blocked-age, backed by Prometheus ← pm-bridge. Live at `:3000/d/pm-flow`, all four panels rendering real data from the seeded board.
 - [x] Layer 2 — **Board UI** (WeKan): the Kanban board itself, backed by Mongo — live on worker4080:8090 (needs first admin registered)
