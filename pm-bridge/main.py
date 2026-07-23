@@ -119,6 +119,10 @@ class WekanClient:
     async def boards(self) -> list[dict]:
         return await self._get(f"/api/users/{self._user_id}/boards")
 
+    async def board_detail(self, board_id: str) -> dict:
+        # Full board doc — carries the label definitions ({_id, name, color}).
+        return await self._get(f"/api/boards/{board_id}")
+
     async def lists(self, board_id: str) -> list[dict]:
         return await self._get(f"/api/boards/{board_id}/lists")
 
@@ -145,6 +149,15 @@ async def _collect_board_metrics(wk: WekanClient, board: dict, now: float) -> No
     board_title = board.get("title", board_id)
     window_start = now - FLOW_INTERVAL_SECONDS
 
+    # WeKan cards reference labels by id, not name. Build id -> lowercased-name
+    # so we can tell whether a card carries the configured blocked label.
+    detail = await wk.board_detail(board_id)
+    blocked_label_ids = {
+        lab["_id"]
+        for lab in (detail.get("labels") or [])
+        if str(lab.get("name", "")).lower() == WEKAN_BLOCKED_LABEL
+    }
+
     completed_cycles: list[float] = []
     throughput = 0
     oldest_blocked_ts: float | None = None
@@ -168,8 +181,8 @@ async def _collect_board_metrics(wk: WekanClient, board: dict, now: float) -> No
                 if start is not None and end >= start:
                     completed_cycles.append(end - start)
 
-            labels = [str(x).lower() for x in (card.get("labels") or [])]
-            if WEKAN_BLOCKED_LABEL in labels:
+            card_label_ids = set(card.get("labelIds") or [])
+            if blocked_label_ids & card_label_ids:
                 # No native "blocked since" — use last activity as the proxy age anchor.
                 anchor = _parse_ts(card.get("dateLastActivity")) or _parse_ts(card.get("createdAt"))
                 if anchor is not None and (oldest_blocked_ts is None or anchor < oldest_blocked_ts):
